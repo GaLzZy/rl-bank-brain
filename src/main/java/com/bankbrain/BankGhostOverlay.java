@@ -11,7 +11,6 @@ import net.runelite.api.Client;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetItem;
-import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
 @Singleton
@@ -31,15 +30,18 @@ public class BankGhostOverlay extends WidgetItemOverlay
         this.client = client;
         this.service = service;
         this.config = config;
-
-        showOnBank();
-        setLayer(OverlayLayer.ALWAYS_ON_TOP);
     }
 
     @Override
     public void renderItemOverlay(Graphics2D graphics, int itemId, WidgetItem item)
     {
         if (!config.ghostOverlay())
+        {
+            return;
+        }
+
+        Widget widget = item.getWidget();
+        if (widget == null || widget.getParentId() != WidgetInfo.BANK_ITEM_CONTAINER.getId())
         {
             return;
         }
