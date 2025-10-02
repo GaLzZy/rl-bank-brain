@@ -89,7 +89,9 @@ public class PlanBuilder
                 tabSlotFor(tabSlotPositions, toIndex),
                 item.getItemId(),
                 item.getName(),
-                item.getQuantity()
+                item.getQuantity(),
+                item.getSlotType(),
+                item.getCategory()
             ));
         }
         return steps;

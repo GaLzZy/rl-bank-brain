@@ -14,4 +14,6 @@ public class ReorderStep
     int itemId;
     String itemName;
     int quantity;
+    SlotType slotType;
+    BankCategory category;
 }

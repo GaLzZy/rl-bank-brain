@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.util.Locale;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -103,11 +104,12 @@ public class BankGhostOverlay extends WidgetItemOverlay
         else if (activeStep >= 0 && activeStep < plan.getSteps().size())
         {
             ReorderStep step = plan.getSteps().get(activeStep);
-            message = String.format("Step %d/%d: %s x%d (%s #%d → %s #%d)",
+            message = String.format("Step %d/%d: %s x%d [%s] (%s #%d → %s #%d)",
                 activeStep + 1,
                 plan.getSteps().size(),
                 step.getItemName(),
                 step.getQuantity(),
+                formatSlotType(step.getSlotType()),
                 describeTab(step.getFromTab()),
                 step.getFromTabSlot(),
                 describeTab(step.getToTab()),
@@ -146,10 +148,32 @@ public class BankGhostOverlay extends WidgetItemOverlay
         {
             return "All Items";
         }
-        if (tab == 1)
-        {
-            return "All Items (Tab 1)";
-        }
         return "Tab " + tab;
+    }
+
+    private String formatSlotType(SlotType slotType)
+    {
+        if (slotType == null)
+        {
+            return "Unknown";
+        }
+
+        String name = slotType.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String[] parts = name.split(" ");
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < parts.length; i++)
+        {
+            if (parts[i].isEmpty())
+            {
+                continue;
+            }
+            if (i > 0)
+            {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(parts[i].charAt(0)))
+                .append(parts[i].substring(1));
+        }
+        return builder.toString();
     }
 }
