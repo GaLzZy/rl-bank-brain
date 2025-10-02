@@ -30,6 +30,7 @@ public class BankGhostOverlay extends WidgetItemOverlay
         this.client = client;
         this.service = service;
         this.config = config;
+        showOnBank();
     }
 
     @Override
@@ -68,11 +69,11 @@ public class BankGhostOverlay extends WidgetItemOverlay
 
         if (index == step.getFromIndex())
         {
-            highlightSlot(graphics, bounds, SOURCE_COLOR);
+            highlightSlot(graphics, bounds, SOURCE_COLOR, 3f);
         }
         else if (index == step.getToIndex())
         {
-            highlightSlot(graphics, bounds, TARGET_COLOR);
+            highlightSlot(graphics, bounds, TARGET_COLOR, 2f);
         }
     }
 
@@ -97,7 +98,7 @@ public class BankGhostOverlay extends WidgetItemOverlay
         String message;
         if (plan.isEmpty())
         {
-            message = "Bank Brain target layout ready";
+            message = String.format("Bank Brain target layout ready (%d items)", service.getSnapshot().size());
         }
         else if (activeStep >= 0 && activeStep < plan.getSteps().size())
         {
@@ -126,12 +127,12 @@ public class BankGhostOverlay extends WidgetItemOverlay
         return dimension;
     }
 
-    private void highlightSlot(Graphics2D graphics, Rectangle bounds, Color color)
+    private void highlightSlot(Graphics2D graphics, Rectangle bounds, Color color, float strokeWidth)
     {
         Color previousColor = graphics.getColor();
         java.awt.Stroke previousStroke = graphics.getStroke();
         graphics.setColor(color);
-        graphics.setStroke(new BasicStroke(2f));
+        graphics.setStroke(new BasicStroke(strokeWidth));
         graphics.draw(bounds);
         graphics.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), 60));
         graphics.fill(bounds);

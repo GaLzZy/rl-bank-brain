@@ -36,6 +36,7 @@ public class BankBrainPanel extends PluginPanel
 
     private Runnable rebuildAction = () -> {};
     private Consumer<Integer> stepSelectionListener = step -> {};
+    private boolean suppressSelectionEvents;
 
     @Inject
     public BankBrainPanel()
@@ -85,24 +86,32 @@ public class BankBrainPanel extends PluginPanel
     public void updatePlan(ReorderPlan plan)
     {
         SwingUtilities.invokeLater(() -> {
-            planModel.clear();
-            int stepIndex = 1;
-            for (ReorderStep step : plan.getSteps())
+            suppressSelectionEvents = true;
+            try
             {
-                String entry = String.format("%d. %s #%d → %s #%d — %s x%d",
-                    stepIndex++,
-                    describeTab(step.getFromTab()),
-                    step.getFromTabSlot(),
-                    describeTab(step.getToTab()),
-                    step.getToTabSlot(),
-                    step.getItemName(),
-                    step.getQuantity());
-                planModel.addElement(entry);
+                planModel.clear();
+                int stepIndex = 1;
+                for (ReorderStep step : plan.getSteps())
+                {
+                    String entry = String.format("%d. %s #%d → %s #%d — %s x%d",
+                        stepIndex++,
+                        describeTab(step.getFromTab()),
+                        step.getFromTabSlot(),
+                        describeTab(step.getToTab()),
+                        step.getToTabSlot(),
+                        step.getItemName(),
+                        step.getQuantity());
+                    planModel.addElement(entry);
+                }
+                cyclesLabel.setText("Reorder cycles: " + plan.getCycleCount());
+                if (planModel.isEmpty())
+                {
+                    planList.clearSelection();
+                }
             }
-            cyclesLabel.setText("Reorder cycles: " + plan.getCycleCount());
-            if (planModel.isEmpty())
+            finally
             {
-                planList.clearSelection();
+                suppressSelectionEvents = false;
             }
         });
     }
@@ -120,14 +129,22 @@ public class BankBrainPanel extends PluginPanel
     public void setActiveStep(int step)
     {
         SwingUtilities.invokeLater(() -> {
-            if (step >= 0 && step < planModel.size())
+            suppressSelectionEvents = true;
+            try
             {
-                planList.setSelectedIndex(step);
-                planList.ensureIndexIsVisible(step);
+                if (step >= 0 && step < planModel.size())
+                {
+                    planList.setSelectedIndex(step);
+                    planList.ensureIndexIsVisible(step);
+                }
+                else
+                {
+                    planList.clearSelection();
+                }
             }
-            else
+            finally
             {
-                planList.clearSelection();
+                suppressSelectionEvents = false;
             }
         });
     }
@@ -136,6 +153,10 @@ public class BankBrainPanel extends PluginPanel
     {
         return event -> {
             if (event.getValueIsAdjusting())
+            {
+                return;
+            }
+            if (suppressSelectionEvents)
             {
                 return;
             }
