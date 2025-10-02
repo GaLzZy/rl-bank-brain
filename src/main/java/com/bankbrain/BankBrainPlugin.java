@@ -52,6 +52,7 @@ public class BankBrainPlugin extends Plugin
     protected void startUp()
     {
         panel.setRebuildAction(this::requestRebuild);
+        panel.setStepSelectionListener(bankService::setActiveStep);
         overlayManager.add(overlay);
 
         navButton = NavigationButton.builder()
@@ -86,6 +87,7 @@ public class BankBrainPlugin extends Plugin
             panel.updateSnapshot(bankService.getSnapshot());
             panel.updatePlan(bankService.getReorderPlan());
             panel.updateTimestamp(bankService.getLastRebuild());
+            panel.setActiveStep(bankService.getActiveStep());
         });
     }
 

@@ -2,6 +2,7 @@ package com.bankbrain;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -15,12 +16,25 @@ import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemComposition;
+import net.runelite.api.Varbits;
 import net.runelite.client.game.ItemManager;
 import net.runelite.http.api.item.ItemStats;
 
 @Singleton
 public class BankBrainService
 {
+    private static final int[] TAB_COUNT_VARBITS = {
+        Varbits.BANK_TAB_ONE_COUNT,
+        Varbits.BANK_TAB_TWO_COUNT,
+        Varbits.BANK_TAB_THREE_COUNT,
+        Varbits.BANK_TAB_FOUR_COUNT,
+        Varbits.BANK_TAB_FIVE_COUNT,
+        Varbits.BANK_TAB_SIX_COUNT,
+        Varbits.BANK_TAB_SEVEN_COUNT,
+        Varbits.BANK_TAB_EIGHT_COUNT,
+        Varbits.BANK_TAB_NINE_COUNT
+    };
+
     private final Client client;
     private final ItemManager itemManager;
     private final BankClassifier classifier;
@@ -34,6 +48,10 @@ public class BankBrainService
     private ReorderPlan reorderPlan = new ReorderPlan(List.of(), 0);
     private LayoutEngine.LayoutResult layoutResult = LayoutEngine.LayoutResult.empty();
     private Instant lastRebuild = Instant.EPOCH;
+    private int[] slotTabs = new int[0];
+    private int[] tabSlotPositions = new int[0];
+    private int containerSize = 0;
+    private int activeStep = -1;
 
     @Inject
     public BankBrainService(
@@ -60,10 +78,17 @@ public class BankBrainService
             snapshot = List.of();
             reorderPlan = new ReorderPlan(List.of(), 0);
             layoutResult = LayoutEngine.LayoutResult.empty();
+            slotTabs = new int[0];
+            tabSlotPositions = new int[0];
+            containerSize = 0;
+            activeStep = -1;
             return;
         }
 
         Item[] items = bank.getItems();
+        containerSize = items.length;
+        slotTabs = computeSlotTabs(containerSize);
+        tabSlotPositions = computeTabSlotPositions(slotTabs);
         List<BankItem> collected = new ArrayList<>();
         for (int index = 0; index < items.length; index++)
         {
@@ -96,7 +121,8 @@ public class BankBrainService
                 ha,
                 weight,
                 composition.isStackable(),
-                lastWithdrawn
+                lastWithdrawn,
+                index < slotTabs.length ? slotTabs[index] : 0
             );
             collected.add(bankItem);
         }
@@ -104,9 +130,10 @@ public class BankBrainService
         snapshot = Collections.unmodifiableList(collected);
         List<BankSortRule> rules = sorter.parseRules(config.defaultRules());
         java.util.Comparator<BankItem> comparator = sorter.buildComparator(rules);
-        layoutResult = layoutEngine.buildLayout(snapshot, comparator);
-        reorderPlan = planBuilder.buildPlan(snapshot, layoutResult.getTargetIndex());
+        layoutResult = layoutEngine.buildLayout(snapshot, comparator, slotTabs, containerSize);
+        reorderPlan = planBuilder.buildPlan(snapshot, layoutResult.getTargetIndex(), containerSize, slotTabs, tabSlotPositions);
         lastRebuild = Instant.now();
+        activeStep = reorderPlan.isEmpty() ? -1 : 0;
     }
 
     public void recordWithdrawal(int itemId)
@@ -132,5 +159,76 @@ public class BankBrainService
     public Instant getLastRebuild()
     {
         return lastRebuild;
+    }
+
+    public int[] getSlotTabs()
+    {
+        return Arrays.copyOf(slotTabs, slotTabs.length);
+    }
+
+    public int[] getTabSlotPositions()
+    {
+        return Arrays.copyOf(tabSlotPositions, tabSlotPositions.length);
+    }
+
+    public int getContainerSize()
+    {
+        return containerSize;
+    }
+
+    public int getActiveStep()
+    {
+        return activeStep;
+    }
+
+    public void setActiveStep(int step)
+    {
+        if (reorderPlan.isEmpty())
+        {
+            activeStep = -1;
+            return;
+        }
+
+        int clamped = Math.max(-1, Math.min(step, reorderPlan.getSteps().size() - 1));
+        activeStep = clamped;
+    }
+
+    private int[] computeSlotTabs(int slotCount)
+    {
+        if (slotCount <= 0)
+        {
+            return new int[0];
+        }
+
+        int[] tabs = new int[slotCount];
+        int cursor = 0;
+        for (int tab = 0; tab < TAB_COUNT_VARBITS.length && cursor < slotCount; tab++)
+        {
+            int count = Math.max(0, client.getVarbitValue(TAB_COUNT_VARBITS[tab]));
+            for (int i = 0; i < count && cursor < slotCount; i++)
+            {
+                tabs[cursor++] = tab + 1;
+            }
+        }
+
+        while (cursor < slotCount)
+        {
+            tabs[cursor++] = 0;
+        }
+
+        return tabs;
+    }
+
+    private int[] computeTabSlotPositions(int[] tabs)
+    {
+        int[] positions = new int[tabs.length];
+        Map<Integer, Integer> counters = new HashMap<>();
+        for (int i = 0; i < tabs.length; i++)
+        {
+            int tab = tabs[i];
+            int next = counters.merge(tab, 1, Integer::sum);
+            positions[i] = next;
+        }
+        return positions;
     }
 }

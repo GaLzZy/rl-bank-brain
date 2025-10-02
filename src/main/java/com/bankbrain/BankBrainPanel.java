@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.function.Consumer;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.swing.DefaultListModel;
@@ -17,6 +18,8 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionListener;
 import net.runelite.client.ui.PluginPanel;
 
 @Singleton
@@ -32,6 +35,7 @@ public class BankBrainPanel extends PluginPanel
     private final JList<String> planList = new JList<>(planModel);
 
     private Runnable rebuildAction = () -> {};
+    private Consumer<Integer> stepSelectionListener = step -> {};
 
     @Inject
     public BankBrainPanel()
@@ -62,6 +66,8 @@ public class BankBrainPanel extends PluginPanel
         add(header, BorderLayout.NORTH);
 
         planList.setVisibleRowCount(12);
+        planList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        planList.addListSelectionListener(createSelectionListener());
         JScrollPane scrollPane = new JScrollPane(planList);
         add(scrollPane, BorderLayout.CENTER);
     }
@@ -71,6 +77,11 @@ public class BankBrainPanel extends PluginPanel
         this.rebuildAction = rebuildAction == null ? () -> {} : rebuildAction;
     }
 
+    public void setStepSelectionListener(Consumer<Integer> listener)
+    {
+        this.stepSelectionListener = listener == null ? step -> {} : listener;
+    }
+
     public void updatePlan(ReorderPlan plan)
     {
         SwingUtilities.invokeLater(() -> {
@@ -78,15 +89,21 @@ public class BankBrainPanel extends PluginPanel
             int stepIndex = 1;
             for (ReorderStep step : plan.getSteps())
             {
-                String entry = String.format("%d. Move %s x%d from slot %d to slot %d",
+                String entry = String.format("%d. %s #%d → %s #%d — %s x%d",
                     stepIndex++,
+                    describeTab(step.getFromTab()),
+                    step.getFromTabSlot(),
+                    describeTab(step.getToTab()),
+                    step.getToTabSlot(),
                     step.getItemName(),
-                    step.getQuantity(),
-                    step.getFromIndex() + 1,
-                    step.getToIndex() + 1);
+                    step.getQuantity());
                 planModel.addElement(entry);
             }
             cyclesLabel.setText("Reorder cycles: " + plan.getCycleCount());
+            if (planModel.isEmpty())
+            {
+                planList.clearSelection();
+            }
         });
     }
 
@@ -98,5 +115,45 @@ public class BankBrainPanel extends PluginPanel
     public void updateTimestamp(Instant instant)
     {
         SwingUtilities.invokeLater(() -> lastUpdated.setText("Last plan: " + FORMATTER.format(instant)));
+    }
+
+    public void setActiveStep(int step)
+    {
+        SwingUtilities.invokeLater(() -> {
+            if (step >= 0 && step < planModel.size())
+            {
+                planList.setSelectedIndex(step);
+                planList.ensureIndexIsVisible(step);
+            }
+            else
+            {
+                planList.clearSelection();
+            }
+        });
+    }
+
+    private ListSelectionListener createSelectionListener()
+    {
+        return event -> {
+            if (event.getValueIsAdjusting())
+            {
+                return;
+            }
+            int selected = planList.getSelectedIndex();
+            stepSelectionListener.accept(selected);
+        };
+    }
+
+    private String describeTab(int tab)
+    {
+        if (tab <= 0)
+        {
+            return "All Items";
+        }
+        if (tab == 1)
+        {
+            return "All Items (Tab 1)";
+        }
+        return "Tab " + tab;
     }
 }

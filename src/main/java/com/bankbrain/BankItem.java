@@ -23,6 +23,7 @@ public class BankItem
     private final double weight;
     private final boolean stackable;
     private final Instant lastWithdrawn;
+    private final int tabIndex;
 
     public BankItem(
         int itemId,
@@ -37,7 +38,8 @@ public class BankItem
         int highAlchValue,
         double weight,
         boolean stackable,
-        Instant lastWithdrawn)
+        Instant lastWithdrawn,
+        int tabIndex)
     {
         this.itemId = itemId;
         this.quantity = quantity;
@@ -52,6 +54,7 @@ public class BankItem
         this.weight = weight;
         this.stackable = stackable;
         this.lastWithdrawn = lastWithdrawn;
+        this.tabIndex = tabIndex;
     }
 
     public Set<String> getTags()
