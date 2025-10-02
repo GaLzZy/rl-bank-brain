@@ -12,7 +12,6 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.WidgetItemOverlay;
 
 @Singleton
@@ -34,7 +33,6 @@ public class BankGhostOverlay extends WidgetItemOverlay
         this.config = config;
 
         showOnBank();
-        setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ALWAYS_ON_TOP);
     }
 
