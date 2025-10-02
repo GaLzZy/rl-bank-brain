@@ -10,7 +10,14 @@ import javax.inject.Singleton;
 @Singleton
 public class PlanBuilder
 {
-    public ReorderPlan buildPlan(List<BankItem> items, Map<Integer, Integer> targetIndex, int containerSize, int[] slotTabs, int[] tabSlotPositions)
+    public ReorderPlan buildPlan(
+        List<BankItem> items,
+        Map<Integer, Integer> targetIndex,
+        int containerSize,
+        int[] sourceSlotTabs,
+        int[] sourceTabSlotPositions,
+        int[] targetSlotTabs,
+        int[] targetTabSlotPositions)
     {
         int size = Math.max(containerSize, 0);
         int[] permutation = new int[size];
@@ -60,14 +67,28 @@ public class PlanBuilder
             if (cycle.size() > 1)
             {
                 cycles++;
-                steps.addAll(resolveCycle(cycle, permutation, itemsByIndex, slotTabs, tabSlotPositions));
+                steps.addAll(resolveCycle(
+                    cycle,
+                    permutation,
+                    itemsByIndex,
+                    sourceSlotTabs,
+                    sourceTabSlotPositions,
+                    targetSlotTabs,
+                    targetTabSlotPositions));
             }
         }
 
         return new ReorderPlan(steps, cycles);
     }
 
-    private List<ReorderStep> resolveCycle(List<Integer> cycle, int[] permutation, Map<Integer, BankItem> itemsByIndex, int[] slotTabs, int[] tabSlotPositions)
+    private List<ReorderStep> resolveCycle(
+        List<Integer> cycle,
+        int[] permutation,
+        Map<Integer, BankItem> itemsByIndex,
+        int[] sourceSlotTabs,
+        int[] sourceTabSlotPositions,
+        int[] targetSlotTabs,
+        int[] targetTabSlotPositions)
     {
         List<ReorderStep> steps = new ArrayList<>();
         for (int i = cycle.size() - 1; i >= 0; i--)
@@ -83,10 +104,10 @@ public class PlanBuilder
             steps.add(new ReorderStep(
                 fromIndex,
                 toIndex,
-                tabFor(slotTabs, fromIndex),
-                tabFor(slotTabs, toIndex),
-                tabSlotFor(tabSlotPositions, fromIndex),
-                tabSlotFor(tabSlotPositions, toIndex),
+                tabFor(sourceSlotTabs, fromIndex),
+                tabFor(targetSlotTabs, toIndex),
+                tabSlotFor(sourceTabSlotPositions, fromIndex),
+                tabSlotFor(targetTabSlotPositions, toIndex),
                 item.getItemId(),
                 item.getName(),
                 item.getQuantity(),

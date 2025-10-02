@@ -110,9 +110,9 @@ public class BankGhostOverlay extends WidgetItemOverlay
                 step.getItemName(),
                 step.getQuantity(),
                 formatSlotType(step.getSlotType()),
-                describeTab(step.getFromTab()),
+                TabDescriptors.describe(step.getFromTab()),
                 step.getFromTabSlot(),
-                describeTab(step.getToTab()),
+                TabDescriptors.describe(step.getToTab()),
                 step.getToTabSlot());
         }
         else
@@ -140,15 +140,6 @@ public class BankGhostOverlay extends WidgetItemOverlay
         graphics.fill(bounds);
         graphics.setColor(previousColor);
         graphics.setStroke(previousStroke);
-    }
-
-    private String describeTab(int tab)
-    {
-        if (tab <= 0)
-        {
-            return "All Items";
-        }
-        return "Tab " + tab;
     }
 
     private String formatSlotType(SlotType slotType)

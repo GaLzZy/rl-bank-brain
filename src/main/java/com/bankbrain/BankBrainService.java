@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import net.runelite.api.Client;
@@ -34,6 +35,26 @@ public class BankBrainService
         Varbits.BANK_TAB_EIGHT_COUNT,
         Varbits.BANK_TAB_NINE_COUNT
     };
+
+    private static final Map<SlotType, Integer> SLOT_TYPE_TAB_MAP = Map.ofEntries(
+        Map.entry(SlotType.WEAPON, 1),
+        Map.entry(SlotType.HELM, 2),
+        Map.entry(SlotType.BODY, 2),
+        Map.entry(SlotType.LEGS, 2),
+        Map.entry(SlotType.SHIELD, 2),
+        Map.entry(SlotType.GLOVES, 2),
+        Map.entry(SlotType.BOOTS, 2),
+        Map.entry(SlotType.CAPE, 3),
+        Map.entry(SlotType.AMULET, 3),
+        Map.entry(SlotType.RING, 3),
+        Map.entry(SlotType.JEWELLERY, 3),
+        Map.entry(SlotType.AMMO, 4),
+        Map.entry(SlotType.QUIVER, 4),
+        Map.entry(SlotType.TOOL, 5),
+        Map.entry(SlotType.CONSUMABLE, 6),
+        Map.entry(SlotType.MATERIAL, 7),
+        Map.entry(SlotType.PET, 8)
+    );
 
     private final Client client;
     private final ItemManager itemManager;
@@ -130,8 +151,18 @@ public class BankBrainService
         snapshot = Collections.unmodifiableList(collected);
         List<BankSortRule> rules = sorter.parseRules(config.defaultRules());
         java.util.Comparator<BankItem> comparator = sorter.buildComparator(rules);
-        layoutResult = layoutEngine.buildLayout(snapshot, comparator, slotTabs, containerSize);
-        reorderPlan = planBuilder.buildPlan(snapshot, layoutResult.getTargetIndex(), containerSize, slotTabs, tabSlotPositions);
+        Map<Integer, Integer> desiredTabs = snapshot.stream()
+            .collect(Collectors.toMap(BankItem::getIndex, this::desiredTabFor));
+
+        layoutResult = layoutEngine.buildLayout(snapshot, comparator, slotTabs, containerSize, desiredTabs);
+        reorderPlan = planBuilder.buildPlan(
+            snapshot,
+            layoutResult.getTargetIndex(),
+            containerSize,
+            slotTabs,
+            tabSlotPositions,
+            layoutResult.getTargetSlotTabs(),
+            layoutResult.getTargetTabSlotPositions());
         lastRebuild = Instant.now();
         activeStep = reorderPlan.isEmpty() ? -1 : 0;
     }
@@ -230,5 +261,39 @@ public class BankBrainService
             positions[i] = next;
         }
         return positions;
+    }
+
+    private int desiredTabFor(BankItem item)
+    {
+        Integer mappedTab = SLOT_TYPE_TAB_MAP.get(item.getSlotType());
+        if (mappedTab != null)
+        {
+            return mappedTab;
+        }
+
+        switch (item.getCategory())
+        {
+            case RUNES_AND_TELEPORTS:
+                return 4;
+            case UTILITY:
+                return 5;
+            case CONSUMABLES:
+                return 6;
+            case GATHERING:
+            case PRODUCTION:
+            case FARMING:
+                return 7;
+            case PETS:
+                return 8;
+            case CLUE:
+            case COSMETIC:
+            case QUEST:
+            case STAGING:
+                return 9;
+            case COMBAT_GEAR:
+            case UNASSIGNED:
+            default:
+                return 9;
+        }
     }
 }

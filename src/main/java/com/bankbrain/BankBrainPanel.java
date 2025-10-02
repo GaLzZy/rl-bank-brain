@@ -158,15 +158,6 @@ public class BankBrainPanel extends PluginPanel
         };
     }
 
-    private String describeTab(int tab)
-    {
-        if (tab <= 0)
-        {
-            return "All Items";
-        }
-        return "Tab " + tab;
-    }
-
     private void configureTypeFilter()
     {
         DefaultComboBoxModel<SlotTypeOption> model = new DefaultComboBoxModel<>();
@@ -201,9 +192,9 @@ public class BankBrainPanel extends PluginPanel
                 visibleStepIndices.add(i);
                 String entry = String.format("%d. %s #%d → %s #%d — %s x%d [%s]",
                     displayIndex++,
-                    describeTab(step.getFromTab()),
+                    TabDescriptors.describe(step.getFromTab()),
                     step.getFromTabSlot(),
-                    describeTab(step.getToTab()),
+                    TabDescriptors.describe(step.getToTab()),
                     step.getToTabSlot(),
                     step.getItemName(),
                     step.getQuantity(),
