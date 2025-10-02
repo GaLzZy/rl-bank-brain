@@ -8,6 +8,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.InventoryID;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
@@ -42,12 +43,15 @@ public class BankBrainPlugin extends Plugin
     @Inject
     private ClientToolbar clientToolbar;
 
+    @Inject
+    private ClientThread clientThread;
+
     private NavigationButton navButton;
 
     @Override
     protected void startUp()
     {
-        panel.setRebuildAction(this::rebuildPlan);
+        panel.setRebuildAction(this::requestRebuild);
         overlayManager.add(overlay);
 
         navButton = NavigationButton.builder()
@@ -60,7 +64,7 @@ public class BankBrainPlugin extends Plugin
 
         if (config.autoPlan())
         {
-            rebuildPlan();
+            requestRebuild();
         }
     }
 
@@ -74,12 +78,15 @@ public class BankBrainPlugin extends Plugin
         }
     }
 
-    private void rebuildPlan()
+    private void requestRebuild()
     {
-        bankService.rebuildPlan(config);
-        panel.updateSnapshot(bankService.getSnapshot());
-        panel.updatePlan(bankService.getReorderPlan());
-        panel.updateTimestamp(bankService.getLastRebuild());
+        clientThread.invokeLater(() ->
+        {
+            bankService.rebuildPlan(config);
+            panel.updateSnapshot(bankService.getSnapshot());
+            panel.updatePlan(bankService.getReorderPlan());
+            panel.updateTimestamp(bankService.getLastRebuild());
+        });
     }
 
     @Subscribe
@@ -87,7 +94,7 @@ public class BankBrainPlugin extends Plugin
     {
         if (event.getContainerId() == InventoryID.BANK.getId() && config.autoPlan())
         {
-            rebuildPlan();
+            requestRebuild();
         }
     }
 
