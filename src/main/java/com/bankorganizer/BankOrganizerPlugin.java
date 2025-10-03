@@ -1,6 +1,12 @@
 package com.bankorganizer;
 
 import com.google.inject.Provides;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +41,7 @@ import net.runelite.http.api.item.ItemStats;
 public class BankOrganizerPlugin extends Plugin
 {
         private static final List<BankCategory> CATEGORIES = BankCategoryDefinitions.CATEGORIES;
+        private static final BufferedImage NAVIGATION_ICON = createNavigationIcon();
 
         @Inject
         private Client client;
@@ -62,6 +69,7 @@ public class BankOrganizerPlugin extends Plugin
                 navigationButton = NavigationButton.builder()
                         .tooltip("Bank Organizer")
                         .priority(5)
+                        .icon(NAVIGATION_ICON)
                         .panel(panel)
                         .build();
 
@@ -189,6 +197,33 @@ public class BankOrganizerPlugin extends Plugin
                 }
 
                 return EquipmentInventorySlot.values()[slot];
+        }
+
+        private static BufferedImage createNavigationIcon()
+        {
+                final int size = 32;
+                final BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                final Graphics2D graphics = image.createGraphics();
+
+                graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                graphics.setColor(new Color(37, 99, 235));
+                graphics.fillRoundRect(0, 0, size, size, 8, 8);
+
+                graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                graphics.setColor(Color.WHITE);
+                graphics.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 18));
+
+                final String text = "BO";
+                final FontMetrics metrics = graphics.getFontMetrics();
+                final int textWidth = metrics.stringWidth(text);
+                final int textHeight = metrics.getAscent();
+                final int x = (size - textWidth) / 2;
+                final int y = (size - metrics.getHeight()) / 2 + textHeight;
+
+                graphics.drawString(text, x, y);
+                graphics.dispose();
+
+                return image;
         }
 
         @Provides
