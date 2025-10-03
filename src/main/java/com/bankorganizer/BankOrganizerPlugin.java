@@ -176,6 +176,8 @@ public class BankOrganizerPlugin extends Plugin
                                 }
                         }
 
+                        updateSuggestionListDisplay();
+
                         if (total == 0 || suggestionToDisplay == null)
                         {
                                 panel.showPlaceholder("No items found in your bank.");
@@ -241,16 +243,19 @@ public class BankOrganizerPlugin extends Plugin
                 if (total == 0)
                 {
                         panel.showPlaceholder("No items found in your bank.");
+                        updateSuggestionListDisplay();
                         return;
                 }
 
                 if (completed)
                 {
                         panel.showCompletion(total, config.loopHighlights());
+                        updateSuggestionListDisplay();
                         return;
                 }
 
                 panel.showSuggestion(suggestionToDisplay, indexToDisplay, total);
+                updateSuggestionListDisplay();
         }
 
         private void restartReview()
@@ -278,10 +283,12 @@ public class BankOrganizerPlugin extends Plugin
                 if (total == 0 || suggestionToDisplay == null)
                 {
                         panel.showPlaceholder("No items found in your bank.");
+                        updateSuggestionListDisplay();
                         return;
                 }
 
                 panel.showSuggestion(suggestionToDisplay, 0, total);
+                updateSuggestionListDisplay();
         }
 
         private void clearSuggestions()
@@ -292,6 +299,8 @@ public class BankOrganizerPlugin extends Plugin
                         activeIndex = -1;
                         activeSuggestion = null;
                 }
+
+                updateSuggestionListDisplay();
         }
 
         private boolean hasRealItems(final Item[] items)
@@ -447,5 +456,19 @@ public class BankOrganizerPlugin extends Plugin
         BankOrganizerConfig provideConfig(final ConfigManager configManager)
         {
                 return configManager.getConfig(BankOrganizerConfig.class);
+        }
+
+        private void updateSuggestionListDisplay()
+        {
+                final List<BankItemSuggestion> snapshot = new ArrayList<>();
+                final int index;
+
+                synchronized (suggestionQueue)
+                {
+                        snapshot.addAll(suggestionQueue);
+                        index = activeIndex;
+                }
+
+                panel.updateSuggestionList(snapshot, index);
         }
 }
