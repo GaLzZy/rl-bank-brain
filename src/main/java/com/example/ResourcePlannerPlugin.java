@@ -23,6 +23,7 @@ import net.runelite.api.Skill;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
@@ -62,6 +63,9 @@ public class ResourcePlannerPlugin extends Plugin
     @Inject
     private ResourcePlannerOverlay overlay;
 
+    @Inject
+    private ClientThread clientThread;
+
     private final Map<Integer, Integer> resourceQuantities = new HashMap<>();
     private final Map<Skill, Integer> skillProgress = new EnumMap<>(Skill.class);
     private List<ResourceStatus> lastResourceStatuses = Collections.emptyList();
@@ -72,8 +76,11 @@ public class ResourcePlannerPlugin extends Plugin
     protected void startUp()
     {
         overlayManager.add(overlay);
-        refreshTrackedResources();
-        evaluateAndAnnounce("start-up");
+        clientThread.invoke(() ->
+        {
+            refreshTrackedResources();
+            evaluateAndAnnounce("start-up");
+        });
     }
 
     @Override
@@ -98,8 +105,11 @@ public class ResourcePlannerPlugin extends Plugin
     {
         if (event.getGameState() == GameState.LOGGED_IN)
         {
-            refreshTrackedResources();
-            evaluateAndAnnounce("login");
+            clientThread.invoke(() ->
+            {
+                refreshTrackedResources();
+                evaluateAndAnnounce("login");
+            });
         }
     }
 
@@ -111,15 +121,24 @@ public class ResourcePlannerPlugin extends Plugin
             return;
         }
 
-        refreshTrackedResources();
-        evaluateAndAnnounce("inventory update");
+        clientThread.invoke(() ->
+        {
+            refreshTrackedResources();
+            evaluateAndAnnounce("inventory update");
+        });
     }
 
     @Subscribe
     public void onStatChanged(StatChanged event)
     {
-        skillProgress.put(event.getSkill(), event.getLevel());
-        evaluateAndAnnounce("skill update");
+        Skill skill = event.getSkill();
+        int level = event.getLevel();
+
+        clientThread.invoke(() ->
+        {
+            skillProgress.put(skill, level);
+            evaluateAndAnnounce("skill update");
+        });
     }
 
     @Subscribe
@@ -130,7 +149,7 @@ public class ResourcePlannerPlugin extends Plugin
             return;
         }
 
-        evaluateAndAnnounce("config changed");
+        clientThread.invoke(() -> evaluateAndAnnounce("config changed"));
     }
 
     public List<ResourceStatus> getLastResourceStatuses()
