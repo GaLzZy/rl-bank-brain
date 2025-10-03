@@ -7,14 +7,22 @@ final class BankItemSuggestion
         private final int quantity;
         private final String categoryName;
         private final String subcategoryName;
+        private final int slot;
 
-        BankItemSuggestion(final int itemId, final String itemName, final int quantity, final String categoryName, final String subcategoryName)
+        BankItemSuggestion(
+                final int itemId,
+                final String itemName,
+                final int quantity,
+                final String categoryName,
+                final String subcategoryName,
+                final int slot)
         {
                 this.itemId = itemId;
                 this.itemName = itemName;
                 this.quantity = quantity;
                 this.categoryName = categoryName;
                 this.subcategoryName = subcategoryName;
+                this.slot = slot;
         }
 
         int getItemId()
@@ -40,5 +48,10 @@ final class BankItemSuggestion
         String getSubcategoryName()
         {
                 return subcategoryName;
+        }
+
+        int getSlot()
+        {
+                return slot;
         }
 }

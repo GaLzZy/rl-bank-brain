@@ -8,11 +8,11 @@ import net.runelite.client.config.ConfigItem;
 public interface BankOrganizerConfig extends Config
 {
         @ConfigItem(
-                keyName = "showEmptyCategories",
-                name = "Show empty categories",
-                description = "Display all categories even when they have no matching bank items."
+                keyName = "loopHighlights",
+                name = "Loop highlights",
+                description = "Keep cycling through the item queue instead of stopping at the end."
         )
-        default boolean showEmptyCategories()
+        default boolean loopHighlights()
         {
                 return false;
         }

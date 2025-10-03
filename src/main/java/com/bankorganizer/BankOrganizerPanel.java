@@ -2,13 +2,11 @@ package com.bankorganizer;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import javax.inject.Singleton;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -18,13 +16,22 @@ import net.runelite.client.ui.PluginPanel;
 @Singleton
 class BankOrganizerPanel extends PluginPanel
 {
-        private static final String HOW_TO_TEXT = "<html><b>How to tidy your bank:</b> "
-                + "Create tabs named after the sections below and drag each listed item into its suggested tab. "
-                + "Sub-headings break the tab into smaller piles so you can stage equipment or supplies together.</html>";
+        private static final String HOW_TO_TEXT = "<html><b>How to tidy your bank:</b> We'll highlight one item at a time in cyan. "
+                + "Move the glowing item into the tab named below, then click the button to jump to the next highlight.</html>";
 
         private final JPanel content = new JPanel();
-        private final JLabel placeholder = new JLabel("Open your bank to see organization suggestions.");
+        private final JLabel placeholder = new JLabel();
         private final JLabel howToLabel = new JLabel(HOW_TO_TEXT);
+        private final JLabel itemLabel = new JLabel();
+        private final JLabel targetLabel = new JLabel();
+        private final JLabel subcategoryLabel = new JLabel();
+        private final JLabel progressLabel = new JLabel();
+        private final JLabel highlightTipLabel = new JLabel("<html><i>Tip: scroll your bank if you don't immediately see the cyan glow.</i></html>");
+        private final JLabel completionLabel = new JLabel();
+        private final JButton actionButton = new JButton("Mark moved & highlight next");
+
+        private Listener listener;
+        private Mode mode = Mode.PLACEHOLDER;
 
         BankOrganizerPanel()
         {
@@ -36,94 +43,144 @@ class BankOrganizerPanel extends PluginPanel
                 howToLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
                 howToLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
 
+                placeholder.setAlignmentX(Component.LEFT_ALIGNMENT);
+                itemLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                targetLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                subcategoryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                progressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                highlightTipLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                completionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+                actionButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+                actionButton.addActionListener(event -> {
+                        if (listener == null)
+                        {
+                                return;
+                        }
+
+                        if (mode == Mode.ACTIVE)
+                        {
+                                listener.onAdvanceRequested();
+                        }
+                        else if (mode == Mode.COMPLETE)
+                        {
+                                listener.onRestartRequested();
+                        }
+                });
+
                 final JScrollPane scrollPane = new JScrollPane(content);
                 scrollPane.setBorder(BorderFactory.createEmptyBorder());
                 scrollPane.getVerticalScrollBar().setUnitIncrement(16);
                 add(scrollPane, BorderLayout.CENTER);
 
-                showPlaceholder("Open your bank to see organization suggestions.");
+                showPlaceholder("Open your bank to begin reorganizing.");
+        }
+
+        void setListener(final Listener listener)
+        {
+                this.listener = listener;
         }
 
         void showPlaceholder(final String message)
         {
                 SwingUtilities.invokeLater(() -> {
+                        mode = Mode.PLACEHOLDER;
                         content.removeAll();
                         placeholder.setText(message);
-                        placeholder.setAlignmentX(Component.LEFT_ALIGNMENT);
                         content.add(placeholder);
+                        actionButton.setEnabled(false);
+                        actionButton.setText("Mark moved & highlight next");
                         content.revalidate();
                         content.repaint();
                 });
         }
 
-        void updateSuggestions(final Map<String, List<BankItemSuggestion>> categorizedItems)
+        void showSuggestion(final BankItemSuggestion suggestion, final int index, final int total)
         {
                 SwingUtilities.invokeLater(() -> {
+                        mode = Mode.ACTIVE;
                         content.removeAll();
 
-                        if (categorizedItems.isEmpty())
+                        content.add(howToLabel);
+                        content.add(Box.createVerticalStrut(8));
+
+                        itemLabel.setText(String.format(
+                                "<html><b>Highlighted item:</b> %s <span style='color:gray'>(x%d)</span></html>",
+                                suggestion.getItemName(),
+                                suggestion.getQuantity()));
+                        content.add(itemLabel);
+
+                        targetLabel.setText(String.format("<html><b>Suggested tab:</b> %s</html>", suggestion.getCategoryName()));
+                        targetLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+                        content.add(targetLabel);
+
+                        if (suggestion.getSubcategoryName() != null)
                         {
-                                placeholder.setText("No items found in your bank.");
-                                placeholder.setAlignmentX(Component.LEFT_ALIGNMENT);
-                                content.add(placeholder);
+                                subcategoryLabel.setText(String.format("<html><b>Focus:</b> %s</html>", suggestion.getSubcategoryName()));
+                                subcategoryLabel.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
+                                content.add(subcategoryLabel);
                         }
-                        else
-                        {
-                                content.add(howToLabel);
 
-                                for (Map.Entry<String, List<BankItemSuggestion>> entry : categorizedItems.entrySet())
-                                {
-                                        final JPanel categoryPanel = new JPanel();
-                                        categoryPanel.setLayout(new BoxLayout(categoryPanel, BoxLayout.Y_AXIS));
-                                        categoryPanel.setBorder(BorderFactory.createTitledBorder(String.format(
-                                                "Move into: %s tab",
-                                                entry.getKey())));
-                                        categoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                        progressLabel.setText(String.format("<html><i>Item %d of %d</i></html>", index + 1, total));
+                        progressLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+                        content.add(progressLabel);
 
-                                        if (entry.getValue().isEmpty())
-                                        {
-                                                final JLabel emptyLabel = new JLabel("<html><i>No items matched yet. Drop future finds here.</i></html>");
-                                                emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                                                categoryPanel.add(emptyLabel);
-                                                content.add(categoryPanel);
-                                                continue;
-                                        }
+                        content.add(Box.createVerticalStrut(4));
+                        content.add(highlightTipLabel);
 
-                                        final Map<String, List<BankItemSuggestion>> groupedBySubcategory = entry.getValue()
-                                                .stream()
-                                                .collect(Collectors.groupingBy(
-                                                        suggestion -> suggestion.getSubcategoryName() == null ? "General" : suggestion.getSubcategoryName(),
-                                                        LinkedHashMap::new,
-                                                        Collectors.toList()));
-
-                                        for (Map.Entry<String, List<BankItemSuggestion>> subEntry : groupedBySubcategory.entrySet())
-                                        {
-                                                final JLabel subcategoryLabel = new JLabel(String.format(
-                                                        "<html><b>%s focus</b> &ndash; stage these together:</html>",
-                                                        subEntry.getKey()));
-                                                subcategoryLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                                                subcategoryLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
-                                                categoryPanel.add(subcategoryLabel);
-
-                                                for (BankItemSuggestion suggestion : subEntry.getValue())
-                                                {
-                                                        final String labelText = String.format(
-                                                                "<html>&bull; %s <span style='color:gray'>(x%d)</span></html>",
-                                                                suggestion.getItemName(),
-                                                                suggestion.getQuantity());
-                                                        final JLabel itemLabel = new JLabel(labelText);
-                                                        itemLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-                                                        itemLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
-                                                        categoryPanel.add(itemLabel);
-                                                }
-                                        }
-
-                                        content.add(categoryPanel);
-                                }
-                        }
+                        actionButton.setEnabled(true);
+                        actionButton.setText("Mark moved & highlight next");
+                        content.add(Box.createVerticalStrut(12));
+                        content.add(actionButton);
 
                         content.revalidate();
                         content.repaint();
                 });
+        }
+
+        void showCompletion(final int reviewedCount, final boolean loopEnabled)
+        {
+                SwingUtilities.invokeLater(() -> {
+                        mode = loopEnabled ? Mode.ACTIVE : Mode.COMPLETE;
+                        content.removeAll();
+
+                        content.add(howToLabel);
+                        content.add(Box.createVerticalStrut(8));
+
+                        final String completionText = loopEnabled
+                                ? "<html><b>Highlights will keep cycling.</b> Use the button if you'd like to restart from the first item.</html>"
+                                : String.format("<html><b>All items reviewed!</b> You walked through %d suggestions. Click below to start over.</html>", reviewedCount);
+                        completionLabel.setText(completionText);
+                        content.add(completionLabel);
+
+                        if (loopEnabled)
+                        {
+                                progressLabel.setText(String.format("<html><i>Loop mode is on &ndash; you're back to item 1 of %d.</i></html>", reviewedCount));
+                                progressLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+                                content.add(progressLabel);
+                        }
+
+                        actionButton.setEnabled(true);
+                        actionButton.setText(loopEnabled ? "Highlight first item" : "Restart review");
+                        content.add(Box.createVerticalStrut(12));
+                        content.add(actionButton);
+
+                        content.revalidate();
+                        content.repaint();
+                });
+        }
+
+        interface Listener
+        {
+                void onAdvanceRequested();
+
+                void onRestartRequested();
+        }
+
+        private enum Mode
+        {
+                PLACEHOLDER,
+                ACTIVE,
+                COMPLETE
         }
 }
