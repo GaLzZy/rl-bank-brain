@@ -2,6 +2,7 @@ package com.bankorganizer;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Dimension;
 import javax.inject.Singleton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -10,6 +11,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import net.runelite.client.ui.PluginPanel;
 
@@ -20,6 +22,7 @@ class BankOrganizerPanel extends PluginPanel
                 + "Move the glowing item into the tab named below, then click the button to jump to the next highlight.</html>";
 
         private final JPanel content = new JPanel();
+        private final JPanel viewport = new JPanel(new BorderLayout());
         private final JLabel placeholder = new JLabel();
         private final JLabel howToLabel = new JLabel(HOW_TO_TEXT);
         private final JLabel itemLabel = new JLabel();
@@ -36,9 +39,14 @@ class BankOrganizerPanel extends PluginPanel
         BankOrganizerPanel()
         {
                 setLayout(new BorderLayout());
+                setMinimumSize(new Dimension(PluginPanel.PANEL_WIDTH, 200));
+                setPreferredSize(new Dimension(PluginPanel.PANEL_WIDTH, 320));
 
                 content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
                 content.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+                viewport.setOpaque(false);
+                viewport.add(content, BorderLayout.NORTH);
 
                 howToLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
                 howToLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
@@ -68,9 +76,11 @@ class BankOrganizerPanel extends PluginPanel
                         }
                 });
 
-                final JScrollPane scrollPane = new JScrollPane(content);
+                final JScrollPane scrollPane = new JScrollPane(viewport);
                 scrollPane.setBorder(BorderFactory.createEmptyBorder());
+                scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
                 scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+                scrollPane.setMinimumSize(new Dimension(PluginPanel.PANEL_WIDTH, 200));
                 add(scrollPane, BorderLayout.CENTER);
 
                 showPlaceholder("Open your bank to begin reorganizing.");
